@@ -63,7 +63,7 @@ func (c *Client) VerifyText(ctx context.Context, text, retrievalContext, tenantI
 	if err != nil {
 		return Verdict{}, fmt.Errorf("dial guardrails %s: %w", c.addr, err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	client := pb.NewGuardrailsServiceClient(conn)
 	resp, err := client.VerifyText(dialCtx, &pb.TextRequest{
