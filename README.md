@@ -124,9 +124,12 @@ make lint   # requires golangci-lint
 
 | Repo | Role |
 |------|------|
-| [grounded-llm](https://github.com/kantik001/grounded-llm) | Cited RAG platform + Spec v1 + gRPC Retriever |
+| [grounded-llm](https://github.com/kantik001/grounded-llm) | Cited RAG platform + Spec v1 + gRPC Retriever `:50051` |
 | [mcp-gateway](https://github.com/kantik001/mcp-gateway) | HTTP bridge to MCP tools |
-| **grounded-agent** | ReAct orchestration over both |
+| [grounded-guardrails](https://github.com/kantik001/grounded-guardrails) | Token-level verify gRPC `:50052` |
+| [grounded-bench](https://github.com/kantik001/grounded-bench) | Offline NVR / CP / HR / RR |
+| [grounded-vllm](https://github.com/kantik001/grounded-vllm) | vLLM serving-path verify proxy |
+| **grounded-agent** | ReAct orchestration over retrieval + MCP |
 
 This project does **not** claim Grounded-compatible on its own — run conformance against Grounded LLM.
 
