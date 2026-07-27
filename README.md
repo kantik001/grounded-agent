@@ -12,15 +12,6 @@
 
 ![Grounded Agent architecture](docs/assets/architecture.png)
 
-```mermaid
-flowchart LR
-  User[Client] --> Agent[grounded-agent Go :8000]
-  Agent -->|ReAct Thought/Action| LLM[OpenAI-compatible LLM]
-  Agent -->|retrieve| RAG[grounded-llm gRPC :50051]
-  Agent -->|call_tool| MCP[mcp-gateway :8080]
-  Agent -->|session memory| Redis[(Redis)]
-```
-
 **Loop (max 5 steps):**
 
 1. LLM emits `Thought:` + `Action:`
