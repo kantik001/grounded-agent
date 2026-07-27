@@ -35,6 +35,9 @@ type Config struct {
 	MemoryTTL        time.Duration
 
 	ReactMaxSteps int
+
+	GuardrailsMode     string // off | remote | hybrid
+	GuardrailsGRPCAddr string
 }
 
 // Load reads .env (if present) and environment variables.
@@ -59,13 +62,23 @@ func Load() (Config, error) {
 		RedisURL:         env("REDIS_URL", "redis://localhost:6379/0"),
 		MemoryMaxPairs:   envInt("MEMORY_MAX_PAIRS", 10),
 		MemoryTTL:        time.Duration(envInt("MEMORY_TTL_MINUTES", 30)) * time.Minute,
-		ReactMaxSteps:    envInt("REACT_MAX_STEPS", 5),
+		ReactMaxSteps:      envInt("REACT_MAX_STEPS", 5),
+		GuardrailsMode:     strings.ToLower(env("GUARDRAILS_MODE", "off")),
+		GuardrailsGRPCAddr: env("GUARDRAILS_GRPC_ADDR", "localhost:50052"),
 	}
 
 	switch cfg.RetrieveMode {
 	case "grpc", "http", "mock":
 	default:
 		return cfg, fmt.Errorf("RETRIEVE_MODE must be grpc|http|mock, got %q", cfg.RetrieveMode)
+	}
+	switch cfg.GuardrailsMode {
+	case "", "off", "remote", "hybrid":
+		if cfg.GuardrailsMode == "" {
+			cfg.GuardrailsMode = "off"
+		}
+	default:
+		return cfg, fmt.Errorf("GUARDRAILS_MODE must be off|remote|hybrid, got %q", cfg.GuardrailsMode)
 	}
 	if cfg.ReactMaxSteps < 1 {
 		cfg.ReactMaxSteps = 5

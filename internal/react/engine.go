@@ -62,12 +62,18 @@ type Memory interface {
 	Append(ctx context.Context, sessionID, user, assistant string) error
 }
 
+// AnswerVerifier optionally checks the final answer against retrieval context.
+type AnswerVerifier interface {
+	VerifyText(ctx context.Context, text, retrievalContext, tenantID string) (passed bool, violations []string, err error)
+}
+
 // Engine runs the ReAct loop.
 type Engine struct {
 	LLM       llm.Completer
 	Retriever Retriever
 	Tools     ToolCaller
 	Memory    Memory
+	Verifier  AnswerVerifier // optional; nil or mode off skips
 	MaxSteps  int
 	DomainID  string
 	TenantID  string
@@ -203,6 +209,7 @@ func (e *Engine) Run(ctx context.Context, sessionID, query string) (Result, erro
 	}
 
 	var steps []Step
+	var retrievalContext strings.Builder
 	for i := 0; i < e.MaxSteps; i++ {
 		userPrompt := transcript.String() + "\nProduce the next Thought and Action."
 		completion, err := e.LLM.Complete(ctx, sys, userPrompt)
@@ -237,6 +244,10 @@ func (e *Engine) Run(ctx context.Context, sessionID, query string) (Result, erro
 					obs = "No relevant documents found."
 				} else {
 					obs = ctxText
+					if retrievalContext.Len() > 0 {
+						retrievalContext.WriteString("\n\n")
+					}
+					retrievalContext.WriteString(ctxText)
 				}
 			}
 		case ActionCallTool:
@@ -251,11 +262,21 @@ func (e *Engine) Run(ctx context.Context, sessionID, query string) (Result, erro
 				}
 			}
 		case ActionAnswer:
+			answer := pa.Answer
+			if e.Verifier != nil {
+				passed, violations, verr := e.Verifier.VerifyText(ctx, answer, retrievalContext.String(), tenant)
+				if verr != nil {
+					return Result{}, fmt.Errorf("guardrails verify: %w", verr)
+				}
+				if !passed {
+					answer = formatVerifyFailure(answer, violations)
+				}
+			}
 			step.Observation = "(final)"
 			steps = append(steps, step)
-			res := Result{Answer: pa.Answer, Steps: steps}
+			res := Result{Answer: answer, Steps: steps}
 			if e.Memory != nil && sessionID != "" {
-				_ = e.Memory.Append(ctx, sessionID, query, pa.Answer)
+				_ = e.Memory.Append(ctx, sessionID, query, answer)
 			}
 			return res, nil
 		default:
@@ -279,4 +300,12 @@ func truncateObs(s string) string {
 		return s
 	}
 	return s[:max] + "\n...[truncated]"
+}
+
+func formatVerifyFailure(answer string, violations []string) string {
+	msg := "Grounded verify failed"
+	if len(violations) > 0 {
+		msg += ": " + strings.Join(violations, "; ")
+	}
+	return msg + "\n\nOriginal draft (blocked):\n" + answer
 }
