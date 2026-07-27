@@ -1,0 +1,105 @@
+name: grounded-agent
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  agent:
+    build: .
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      PORT: "8000"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-openrouter/free}
+      RETRIEVE_MODE: ${RETRIEVE_MODE:-mock}
+      GROUNDED_GRPC_ADDR: ${GROUNDED_GRPC_ADDR:-host.docker.internal:50051}
+      RAG_HTTP_URL: ${RAG_HTTP_URL:-http://host.docker.internal:5000}
+      RAG_SERVICE_TOKEN: ${RAG_SERVICE_TOKEN:-}
+      MCP_GATEWAY_URL: ${MCP_GATEWAY_URL:-http://host.docker.internal:8080}
+      MCP_API_KEY: ${MCP_API_KEY:-}
+      REDIS_URL: redis://redis:6379/0
+      DEFAULT_DOMAIN_ID: ${DEFAULT_DOMAIN_ID:-default}
+      DEFAULT_TENANT_ID: ${DEFAULT_TENANT_ID:-default}
+      DEFAULT_LOCALE: ${DEFAULT_LOCALE:-en}
+      REACT_MAX_STEPS: ${REACT_MAX_STEPS:-5}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --- profile: full (pull published siblings) ---
+  postgres:
+    profiles: ["full"]
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: grounded
+      POSTGRES_PASSWORD: grounded
+      POSTGRES_DB: grounded
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grounded -d grounded"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  python:
+    profiles: ["full"]
+    image: ghcr.io/kantik001/grounded-llm-python:0.3.0
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgres://grounded:grounded@postgres:5432/grounded?sslmode=disable
+      RAG_SERVICE_TOKEN: ${RAG_SERVICE_TOKEN:-dev-rag-token}
+    ports:
+      - "5000:5000"
+      - "50051:50051"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  server:
+    profiles: ["full"]
+    image: ghcr.io/kantik001/grounded-llm-server:0.3.0
+    environment:
+      DATABASE_URL: postgres://grounded:grounded@postgres:5432/grounded?sslmode=disable
+      PYTHON_RAG_URL: http://python:5000
+      RAG_SERVICE_TOKEN: ${RAG_SERVICE_TOKEN:-dev-rag-token}
+      LLM_API_KEY: ${LLM_API_KEY:-local}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api}
+      LLM_MODEL: ${LLM_MODEL:-openrouter/free}
+      TELEGRAM_AUTH_DISABLED: "true"
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+    ports:
+      - "8088:8080"
+    depends_on:
+      - python
+      - postgres
+
+  mcp-gateway:
+    profiles: ["full"]
+    # Prefer sibling build via docker-compose.full.yml; placeholder image name for docs.
+    image: grounded-mcp-gateway:local
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      PORT: "8080"
+      GRPC_PORT: "8081"
+      CONFIG_PATH: /app/config/servers.yaml
+      OTEL_SDK_DISABLED: "true"
+    volumes:
+      - mcp_data:/data
+    restart: unless-stopped
+
+volumes:
+  mcp_data:

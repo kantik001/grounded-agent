@@ -1,0 +1,35 @@
+# Override for: docker compose -f docker-compose.yml -f docker-compose.full.yml --profile full up --build -d
+services:
+  agent:
+    environment:
+      RETRIEVE_MODE: grpc
+      GROUNDED_GRPC_ADDR: python:50051
+      RAG_HTTP_URL: http://python:5000
+      RAG_SERVICE_TOKEN: ${RAG_SERVICE_TOKEN:-dev-rag-token}
+      MCP_GATEWAY_URL: http://mcp-gateway:8080
+    depends_on:
+      redis:
+        condition: service_healthy
+      python:
+        condition: service_started
+      mcp-gateway:
+        condition: service_started
+
+  mcp-gateway:
+    profiles: ["full"]
+    build:
+      context: ../mcp-gateway
+      dockerfile: Dockerfile
+    image: grounded-mcp-gateway:local
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      PORT: "8080"
+      GRPC_PORT: "8081"
+      CONFIG_PATH: /app/config/servers.yaml
+      OTEL_SDK_DISABLED: "true"
+    volumes:
+      - mcp_data:/data
+      - ../mcp-gateway/config/servers.yaml:/app/config/servers.yaml:ro
+    restart: unless-stopped
