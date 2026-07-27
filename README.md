@@ -10,6 +10,8 @@
 
 ## Architecture
 
+![Grounded Agent architecture](docs/assets/architecture.png)
+
 ```mermaid
 flowchart LR
   User[Client] --> Agent[grounded-agent Go :8000]
