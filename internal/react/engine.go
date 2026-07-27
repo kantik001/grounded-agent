@@ -220,7 +220,7 @@ func (e *Engine) Run(ctx context.Context, sessionID, query string) (Result, erro
 			obs := "Error: " + err.Error()
 			step.Observation = obs
 			steps = append(steps, step)
-			transcript.WriteString(fmt.Sprintf("\nThought: %s\nAction: %s\nObservation: %s\n", thought, actionRaw, obs))
+			fmt.Fprintf(&transcript, "\nThought: %s\nAction: %s\nObservation: %s\n", thought, actionRaw, obs)
 			continue
 		}
 
@@ -263,7 +263,7 @@ func (e *Engine) Run(ctx context.Context, sessionID, query string) (Result, erro
 		}
 		step.Observation = obs
 		steps = append(steps, step)
-		transcript.WriteString(fmt.Sprintf("\nThought: %s\nAction: %s\nObservation: %s\n", thought, actionRaw, truncateObs(obs)))
+		fmt.Fprintf(&transcript, "\nThought: %s\nAction: %s\nObservation: %s\n", thought, actionRaw, truncateObs(obs))
 	}
 
 	res := Result{Answer: needMoreInfo, Steps: steps, Limited: true}

@@ -51,7 +51,7 @@ func (c *Client) ToolCatalog(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
@@ -107,7 +107,7 @@ func (c *Client) CallTool(ctx context.Context, server, tool string, args json.Ra
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err

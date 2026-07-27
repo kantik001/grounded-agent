@@ -115,7 +115,7 @@ func (c *Client) retrieveGRPC(ctx context.Context, query, domainID, tenantID, lo
 	if err != nil {
 		return "", err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	cli := pb.NewRetrieverClient(conn)
 	if c.Token != "" {
