@@ -11,6 +11,7 @@ import (
 
 	"github.com/kantik001/grounded-agent/internal/api"
 	"github.com/kantik001/grounded-agent/internal/config"
+	"github.com/kantik001/grounded-agent/internal/guardrails"
 	"github.com/kantik001/grounded-agent/internal/llm"
 	"github.com/kantik001/grounded-agent/internal/mcp"
 	"github.com/kantik001/grounded-agent/internal/memory"
@@ -40,11 +41,24 @@ func main() {
 	tools := mcp.Instrumented{Inner: mcp.NewClient(cfg.MCPGatewayURL, cfg.MCPAPIKey)}
 	completer := llm.NewOpenAIClient(cfg.LLMBaseURL, cfg.LLMAPIKey, cfg.LLMModel)
 
+	var verifier react.AnswerVerifier
+	mode := guardrails.NormalizeMode(cfg.GuardrailsMode)
+	if mode != guardrails.ModeOff {
+		adapter, err := guardrails.NewAdapter(mode, cfg.GuardrailsGRPCAddr)
+		if err != nil {
+			log.Error("guardrails", "err", err)
+			os.Exit(1)
+		}
+		verifier = adapter
+		log.Info("guardrails verify enabled", "mode", mode, "addr", cfg.GuardrailsGRPCAddr)
+	}
+
 	eng := &react.Engine{
 		LLM:       completer,
 		Retriever: retriever,
 		Tools:     tools,
 		Memory:    mem,
+		Verifier:  verifier,
 		MaxSteps:  cfg.ReactMaxSteps,
 		DomainID:  cfg.DefaultDomainID,
 		TenantID:  cfg.DefaultTenantID,
@@ -59,7 +73,7 @@ func main() {
 	}
 
 	go func() {
-		log.Info("listening", "addr", httpSrv.Addr, "retrieve_mode", cfg.RetrieveMode)
+		log.Info("listening", "addr", httpSrv.Addr, "retrieve_mode", cfg.RetrieveMode, "guardrails_mode", cfg.GuardrailsMode)
 		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Error("server", "err", err)
 			os.Exit(1)

@@ -6,6 +6,7 @@ require (
 	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/joho/godotenv v1.5.1
+	github.com/kantik001/grounded-guardrails/go v0.0.0-20260727231123-1fa41046a195
 	github.com/prometheus/client_golang v1.24.1
 	github.com/redis/go-redis/v9 v9.21.0
 	google.golang.org/grpc v1.82.1

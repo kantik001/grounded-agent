@@ -111,7 +111,10 @@ See [`.env.example`](.env.example). Important vars:
 | `MCP_GATEWAY_URL` | `http://localhost:8080` | MCP Gateway |
 | `REDIS_URL` | `redis://localhost:6379/0` | Session memory |
 | `REACT_MAX_STEPS` | `5` | Cap on Thought/Action cycles |
+| `GUARDRAILS_MODE` | `off` | `off` \| `remote` \| `hybrid` — optional VerifyText on `answer[...]` |
+| `GUARDRAILS_GRPC_ADDR` | `localhost:50052` | grounded-guardrails gRPC |
 
+When mode is not `off`, the engine accumulates retrieval observations as verify context and calls `VerifyText` before returning a final answer. Failures replace the answer with a blocked draft message. `hybrid` soft-skips transport errors; `remote` surfaces them.
 ## Development
 
 ```bash

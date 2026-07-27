@@ -85,3 +85,62 @@ func TestEngineMaxSteps(t *testing.T) {
 		t.Fatalf("got %+v", res)
 	}
 }
+
+type fakeVerifier struct {
+	passed     bool
+	violations []string
+	err        error
+	sawCtx     string
+	calls      int
+}
+
+func (f *fakeVerifier) VerifyText(ctx context.Context, text, retrievalContext, tenantID string) (bool, []string, error) {
+	f.calls++
+	f.sawCtx = retrievalContext
+	return f.passed, f.violations, f.err
+}
+
+func TestEngineVerifyBlocksAnswer(t *testing.T) {
+	v := &fakeVerifier{passed: false, violations: []string{"numeric claim not in context"}}
+	eng := &Engine{
+		LLM: &llm.ScriptedCompleter{Replies: []string{
+			"Thought: need docs\nAction: retrieve[vacation]",
+			"Thought: invent\nAction: answer[Employees get 99 vacation days.]",
+		}},
+		Retriever: fakeRet{text: "Source: handbook.txt\nEmployees receive 28 paid vacation days."},
+		Verifier:  v,
+		MaxSteps:  5,
+	}
+	res, err := eng.Run(context.Background(), "", "How many?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.calls != 1 {
+		t.Fatalf("verify calls=%d", v.calls)
+	}
+	if !strings.Contains(v.sawCtx, "28 paid") {
+		t.Fatalf("expected retrieval context, got %q", v.sawCtx)
+	}
+	if !strings.Contains(res.Answer, "Grounded verify failed") {
+		t.Fatalf("answer=%q", res.Answer)
+	}
+	if !strings.Contains(res.Answer, "99 vacation") {
+		t.Fatalf("blocked draft missing: %q", res.Answer)
+	}
+}
+
+func TestEngineVerifyNilSkipped(t *testing.T) {
+	eng := &Engine{
+		LLM: &llm.ScriptedCompleter{Replies: []string{
+			"Thought: done\nAction: answer[ok]",
+		}},
+		MaxSteps: 2,
+	}
+	res, err := eng.Run(context.Background(), "", "q")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Answer != "ok" {
+		t.Fatalf("answer=%q", res.Answer)
+	}
+}
