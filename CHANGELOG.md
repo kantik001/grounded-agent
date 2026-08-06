@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Offline demo path: `LLM_MODE=demo`, `scripts/mock_mcp_gateway.py`, [docs/DEMO.md](docs/DEMO.md), `make demo-curls`
+- Compose full profile images bumped to grounded-llm **0.4.0**
+
 ## [0.1.0] - 2026-07-27
 
 Initial public release of the Grounded Agent ReAct orchestrator.

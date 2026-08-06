@@ -7,3 +7,8 @@ coverage.out
 .vscode/
 *.log
 .DS_Store
+
+# local demo smoke leftovers
+.demo-*.err
+.demo-*.log
+

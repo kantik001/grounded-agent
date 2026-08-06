@@ -18,6 +18,7 @@ type Config struct {
 	LLMBaseURL string
 	LLMAPIKey  string
 	LLMModel   string
+	LLMMode    string // openai | demo
 
 	RetrieveMode      string // grpc | http | mock
 	GroundedGRPCAddr  string
@@ -50,6 +51,7 @@ func Load() (Config, error) {
 		LLMBaseURL:       strings.TrimRight(env("LLM_BASE_URL", "https://openrouter.ai/api"), "/"),
 		LLMAPIKey:        env("LLM_API_KEY", ""),
 		LLMModel:         env("LLM_MODEL", "openrouter/free"),
+		LLMMode:          strings.ToLower(env("LLM_MODE", "openai")),
 		RetrieveMode:     strings.ToLower(env("RETRIEVE_MODE", "grpc")),
 		GroundedGRPCAddr: env("GROUNDED_GRPC_ADDR", "localhost:50051"),
 		RAGHTTPURL:       strings.TrimRight(env("RAG_HTTP_URL", "http://localhost:5000"), "/"),
@@ -67,6 +69,11 @@ func Load() (Config, error) {
 		GuardrailsGRPCAddr: env("GUARDRAILS_GRPC_ADDR", "localhost:50052"),
 	}
 
+	switch cfg.LLMMode {
+	case "openai", "demo":
+	default:
+		return cfg, fmt.Errorf("LLM_MODE must be openai|demo, got %q", cfg.LLMMode)
+	}
 	switch cfg.RetrieveMode {
 	case "grpc", "http", "mock":
 	default:

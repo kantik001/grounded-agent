@@ -39,7 +39,11 @@ func main() {
 
 	retriever := retrieve.Instrumented{Inner: retrieve.New(cfg.RetrieveMode, cfg.GroundedGRPCAddr, cfg.RAGHTTPURL, cfg.RAGServiceToken)}
 	tools := mcp.Instrumented{Inner: mcp.NewClient(cfg.MCPGatewayURL, cfg.MCPAPIKey)}
-	completer := llm.NewOpenAIClient(cfg.LLMBaseURL, cfg.LLMAPIKey, cfg.LLMModel)
+	var completer llm.Completer = llm.NewOpenAIClient(cfg.LLMBaseURL, cfg.LLMAPIKey, cfg.LLMModel)
+	if cfg.LLMMode == "demo" {
+		completer = &llm.DemoCompleter{}
+		log.Info("LLM_MODE=demo (rule-based ReAct, no API key)")
+	}
 
 	var verifier react.AnswerVerifier
 	mode := guardrails.NormalizeMode(cfg.GuardrailsMode)

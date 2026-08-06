@@ -8,6 +8,8 @@
 
 > Document facts come from Grounded retrieval. Side effects and files go through MCP. The agent loop never replaces Grounded Spec verify — it consumes the same retrieval contract agents were designed for in Grounded LLM v0.3.
 
+**3-minute offline demo:** [docs/DEMO.md](docs/DEMO.md) (`LLM_MODE=demo` + mock retrieve + `scripts/mock_mcp_gateway.py`).
+
 ## Architecture
 
 ![Grounded Agent architecture](docs/assets/architecture.png)
@@ -33,6 +35,20 @@ curl -s http://localhost:8000/health
 ```
 
 Default `RETRIEVE_MODE=mock` so the agent boots without Grounded LLM.
+
+### Offline demo (no API key)
+
+```bash
+python scripts/mock_mcp_gateway.py   # terminal A
+# terminal B:
+set LLM_MODE=demo
+set RETRIEVE_MODE=mock
+set MCP_GATEWAY_URL=http://127.0.0.1:8080
+go run ./cmd/server
+make demo-curls
+```
+
+See [docs/DEMO.md](docs/DEMO.md).
 
 ### Full stack demo
 
@@ -106,6 +122,7 @@ See [`.env.example`](.env.example). Important vars:
 | Variable | Default | Meaning |
 |----------|---------|---------|
 | `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` | OpenRouter | OpenAI-compatible chat completions |
+| `LLM_MODE` | `openai` | `openai` \| `demo` (rule-based ReAct for offline demo) |
 | `RETRIEVE_MODE` | `grpc` (compose default `mock`) | `grpc` \| `http` \| `mock` |
 | `GROUNDED_GRPC_ADDR` | `localhost:50051` | Grounded Retriever |
 | `MCP_GATEWAY_URL` | `http://localhost:8080` | MCP Gateway |
